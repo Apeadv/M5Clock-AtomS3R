@@ -1,4 +1,4 @@
-# M5Clock — AtomS3R × 3 Chain Mono World Clock
+﻿# M5Clock — AtomS3R × 3 Chain Mono World Clock
 
 [中文](#中文) · [English](#english)
 
@@ -9,6 +9,10 @@
 
 <p align="center">
   <img src="docs/chain-mono.png" width="640" alt="Three Chain Mono modules showing 12:34:56">
+</p>
+
+<p align="center">
+  <img src="docs/chain-text.png" width="640" alt="Three Chain Mono modules showing custom text LOVE">
 </p>
 
 ---
@@ -46,8 +50,14 @@ M5Clock 是一个为 **M5Stack AtomS3R + Atomic toChain Base + 3× Chain Mono** 
   - 不写死 Wi-Fi 密码
   - NTP 自动对时
   - 支持 2.4GHz Wi-Fi
+- **自定义点阵字符**
+  - 配网页新增“点阵屏模式”分支
+  - 可选择北京时间，或输入最多 32 个 ASCII 字符
+  - 4 个字符以内居中显示，更长自动横向滚动
+  - 点阵屏仍在 24×8 的三个 Chain Mono 上显示
 - **交互**
-  - 短按 AtomS3R 按键：切换世界时间页
+  - 短按 AtomS3R 按键：切换点阵屏模式（北京时间 / 自定义字符）
+  - 世界时间页仍每 7 秒自动轮播
   - 长按 3 秒：清除 Wi-Fi 并重新进入配网模式
   - 配网页可设置 Mono 顺序、Mono 亮度、屏幕亮度
 
@@ -81,7 +91,7 @@ Chain 总线：
 
 ```text
 firmware/M5Clock-AtomS3R-M5Burner.bin
-SHA-256: ee5f3681ff4ce7f3d7aef66b8e9c44ec8e1028ca4542114565e0aebf16fa6d3c
+SHA-256: b9afa56d30066be3b4ff91eddf7bcb73ef6c5043eaef1857e201d969ea7cfae3
 ```
 
 步骤：
@@ -102,7 +112,8 @@ SHA-256: ee5f3681ff4ce7f3d7aef66b8e9c44ec8e1028ca4542114565e0aebf16fa6d3c
 3. 页面顶部选择 **中文 / English**。
 4. 选择 2.4GHz Wi-Fi，输入密码。
 5. 按需调整 Mono 顺序、Mono 亮度、屏幕亮度。
-6. 点击 **保存并连接 / Save & Connect**。
+6. 在“点阵屏模式”选择“北京时间”或“自定义字符”；自定义字符最多 32 个 ASCII 字符。
+7. 点击 **保存并连接 / Save & Connect**。
 
 连接成功后，AtomS3R 屏幕会显示世界时间；三个 Chain Mono 显示北京时间。
 
@@ -119,6 +130,8 @@ SHA-256: ee5f3681ff4ce7f3d7aef66b8e9c44ec8e1028ca4542114565e0aebf16fa6d3c
 - 北京时间固定 UTC+8，不跟随设备时区。
 - 数字之间空 1 列；冒号在对应模组最右侧。
 - 只接 1 或 2 个 Mono 时，自动降级显示 `HH` 或 `HH:MM`。
+- 配网页“点阵屏模式”可切换为自定义字符；4 个字符以内居中，更长自动横向滚动。
+- 短按 AtomS3R 按键可在“北京时间”和“自定义字符”之间切换。
 
 **AtomS3R：**
 
@@ -173,16 +186,20 @@ PlatformIO 配置见 `firmware/platformio.ini`。把 M5GFX / M5Chain 放到 `fir
 ├── docs/
 │   ├── s3r-zh.png
 │   ├── s3r-en.png
-│   └── chain-mono.png
+│   ├── chain-mono.png
+│   └── chain-text.png
 ├── tools/
 │   ├── gen_font.py
+│   ├── gen_text_font.py
 │   ├── make_previews.py
 │   ├── make_en_preview.py
+│   ├── make_text_preview.py
 │   └── mock_mono.py
 ├── CHANGELOG.md
 ├── RELEASE_NOTES.md
 ├── THIRD_PARTY_NOTICES.md
 ├── LICENSES/
+│   ├── ADAFRUIT-GFX.txt
 │   └── OFL-1.1.txt
 ├── LICENSE
 └── README.md
@@ -216,7 +233,7 @@ PlatformIO 配置见 `firmware/platformio.ini`。把 M5GFX / M5Chain 放到 `fir
 
 ### 版本
 
-- 固件版本：**1.1.0**
+- 固件版本：**1.2.0**
 - 目标芯片：ESP32-S3（AtomS3R，8MB Flash + 8MB PSRAM）
 - Arduino ESP32 Core：3.1.3
 - M5GFX：0.3.0
@@ -246,6 +263,10 @@ Both the setup page and the AtomS3R screen support **Chinese / English**.
   - One-pixel gap between digits
   - Blinking colons on the first two modules
   - No moving seconds dot at the bottom
+- **Custom dot-matrix text**
+  - New “Dot-matrix mode” section in the setup page
+  - Choose Beijing clock or enter up to 32 ASCII characters
+  - Up to 4 characters are centered; longer text scrolls horizontally
 - **AtomS3R world clock**
   - Large UTC `HH:MM:SS`
   - UTC date, weekday, and detected Mono count `M3`
@@ -262,7 +283,8 @@ Both the setup page and the AtomS3R screen support **Chinese / English**.
   - NTP synchronization
   - 2.4GHz Wi-Fi only
 - **Controls**
-  - Short press: next world-clock page
+  - Short press: switch the dot-matrix mode (Beijing clock / custom text)
+  - The world-clock page still rotates automatically every 7 seconds
   - Hold 3 seconds: clear Wi-Fi and re-enter setup
   - Configurable Mono order, Mono brightness, and LCD brightness
 
@@ -296,7 +318,7 @@ A prebuilt 8MB factory image is included:
 
 ```text
 firmware/M5Clock-AtomS3R-M5Burner.bin
-SHA-256: ee5f3681ff4ce7f3d7aef66b8e9c44ec8e1028ca4542114565e0aebf16fa6d3c
+SHA-256: b9afa56d30066be3b4ff91eddf7bcb73ef6c5043eaef1857e201d969ea7cfae3
 ```
 
 1. Open M5Burner → **Custom Firmware**.
@@ -313,7 +335,8 @@ SHA-256: ee5f3681ff4ce7f3d7aef66b8e9c44ec8e1028ca4542114565e0aebf16fa6d3c
 3. Choose **中文 / English** at the top.
 4. Select a 2.4GHz Wi-Fi network and enter the password.
 5. Adjust Mono order, Mono brightness, and LCD brightness.
-6. Click **Save & Connect**.
+6. Under “Dot-matrix mode”, choose Beijing clock or custom text (ASCII, up to 32 characters).
+7. Click **Save & Connect**.
 
 After connecting, the AtomS3R shows the world clock and the three Chain Mono modules show Beijing time.
 
@@ -330,6 +353,8 @@ The settings page is also available at `http://m5-clock-xxxx.local/` when mDNS i
 - Beijing time is fixed at UTC+8.
 - One blank column between digits.
 - With only one or two Mono modules, the layout falls back to `HH` or `HH:MM`.
+- Custom-text mode uses the same 24×8 area; short text is centered and longer text scrolls.
+- Short-press the AtomS3R button to switch between clock and custom text.
 
 **AtomS3R:**
 
@@ -400,3 +425,5 @@ PlatformIO settings are in `firmware/platformio.ini`. Put M5GFX and M5Chain unde
 ### License
 
 MIT License. M5GFX and M5Chain are copyright M5Stack / lovyan03 and remain under their respective licenses. The Chinese bitmap font is derived from Noto Sans SC Bold under the SIL Open Font License 1.1; see `LICENSES/OFL-1.1.txt`.
+
+
