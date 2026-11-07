@@ -1,4 +1,4 @@
-﻿# M5Clock — AtomS3R × 3 Chain Mono World Clock
+# M5Clock — AtomS3R × 3 Chain Mono World Clock
 
 [中文](#中文) · [English](#english)
 
@@ -52,11 +52,26 @@ M5Clock 是一个为 **M5Stack AtomS3R + Atomic toChain Base + 3× Chain Mono** 
   - 支持 2.4GHz Wi-Fi
 - **自定义点阵字符**
   - 配网页新增“点阵屏模式”分支
-  - 可选择北京时间，或输入最多 32 个 ASCII 字符
+  - 可选择时钟模式，或输入最多 32 个 ASCII 字符
   - 4 个字符以内居中显示，更长自动横向滚动
   - 点阵屏仍在 24×8 的三个 Chain Mono 上显示
+- **点阵屏垂直位置**
+  - 上方 / 下方（整体下移 1 行）
+  - 时钟和自定义字符都生效
+- **点阵屏时区**
+  - 配网页可选择点阵屏显示的地区时间：
+    - 北京、伦敦、纽约、洛杉矶、东京、悉尼、UTC
+    - 自定义 UTC+X：x 由用户输入，范围 -12 到 +14 的整数小时
+  - 固定城市自动处理夏令时；自定义 UTC 偏移不使用夏令时
+  - S3R 城市列表中，已选时区排第一，左侧小条为黄色；其他城市小条为蓝色
+  - 选择 UTC 或自定义 UTC+X 时，北京默认排第一，小条为蓝色
+  - S3R 的城市列表会按所选时区重排并高亮；UTC 大字时间和六城数据不变
+- **滚屏速度**
+  - 配网页可选择 慢 / 正常 / 快
+  - 在 AtomS3R 上双击按键也可循环切换滚屏速度
 - **交互**
-  - 短按 AtomS3R 按键：切换点阵屏模式（北京时间 / 自定义字符）
+  - 短按 AtomS3R 按键：切换点阵屏模式（时钟 / 自定义字符）
+  - 双击 AtomS3R 按键：切换自定义字符滚屏速度
   - 世界时间页仍每 7 秒自动轮播
   - 长按 3 秒：清除 Wi-Fi 并重新进入配网模式
   - 配网页可设置 Mono 顺序、Mono 亮度、屏幕亮度
@@ -91,7 +106,7 @@ Chain 总线：
 
 ```text
 firmware/M5Clock-AtomS3R-M5Burner.bin
-SHA-256: b9afa56d30066be3b4ff91eddf7bcb73ef6c5043eaef1857e201d969ea7cfae3
+SHA-256: 71a832652ebb7b80c259390f49e80ab89d62c4a22298d73cefc8d3678e07a35a
 ```
 
 步骤：
@@ -112,8 +127,10 @@ SHA-256: b9afa56d30066be3b4ff91eddf7bcb73ef6c5043eaef1857e201d969ea7cfae3
 3. 页面顶部选择 **中文 / English**。
 4. 选择 2.4GHz Wi-Fi，输入密码。
 5. 按需调整 Mono 顺序、Mono 亮度、屏幕亮度。
-6. 在“点阵屏模式”选择“北京时间”或“自定义字符”；自定义字符最多 32 个 ASCII 字符。
-7. 点击 **保存并连接 / Save & Connect**。
+6. 在“点阵屏模式”选择“时钟”或“自定义字符”；自定义字符最多 32 个 ASCII 字符。
+7. 在“点阵屏时区”选择固定城市、UTC，或“自定义 UTC+X”；选择自定义时输入 -12 到 +14 的整数小时。
+8. 选择点阵屏垂直位置（上方 / 下方）；如使用自定义字符，再选择滚屏速度。
+9. 点击 **保存并连接 / Save & Connect**。
 
 连接成功后，AtomS3R 屏幕会显示世界时间；三个 Chain Mono 显示北京时间。
 
@@ -131,7 +148,10 @@ SHA-256: b9afa56d30066be3b4ff91eddf7bcb73ef6c5043eaef1857e201d969ea7cfae3
 - 数字之间空 1 列；冒号在对应模组最右侧。
 - 只接 1 或 2 个 Mono 时，自动降级显示 `HH` 或 `HH:MM`。
 - 配网页“点阵屏模式”可切换为自定义字符；4 个字符以内居中，更长自动横向滚动。
-- 短按 AtomS3R 按键可在“北京时间”和“自定义字符”之间切换。
+- 配网页“点阵屏时区”可选择北京、伦敦、纽约、洛杉矶、东京、悉尼、UTC，或自定义 UTC+X。
+- 短按 AtomS3R 按键可在“时钟”和“自定义字符”之间切换。
+- 双击 AtomS3R 按键可循环切换滚屏速度（慢 / 正常 / 快）。
+- 配网页“点阵屏垂直位置”可让时钟和自定义字符整体下移一行，或保持在上方。
 
 **AtomS3R：**
 
@@ -233,7 +253,7 @@ PlatformIO 配置见 `firmware/platformio.ini`。把 M5GFX / M5Chain 放到 `fir
 
 ### 版本
 
-- 固件版本：**1.2.0**
+- 固件版本：**1.3.2**
 - 目标芯片：ESP32-S3（AtomS3R，8MB Flash + 8MB PSRAM）
 - Arduino ESP32 Core：3.1.3
 - M5GFX：0.3.0
@@ -265,8 +285,22 @@ Both the setup page and the AtomS3R screen support **Chinese / English**.
   - No moving seconds dot at the bottom
 - **Custom dot-matrix text**
   - New “Dot-matrix mode” section in the setup page
-  - Choose Beijing clock or enter up to 32 ASCII characters
+  - Choose clock mode or enter up to 32 ASCII characters
   - Up to 4 characters are centered; longer text scrolls horizontally
+- **Dot-matrix vertical position**
+  - Top, or bottom (shifted down one row)
+  - Applies to both the clock and custom text
+- **Dot-matrix time zone**
+  - Select the region shown on the three Chain Mono modules:
+    - Beijing, London, New York, Los Angeles, Tokyo, Sydney, UTC
+    - Custom UTC+X: enter an integer offset from -12 to +14 hours
+  - Fixed cities use automatic DST; custom UTC offsets do not
+  - On the S3R city list, the selected time zone is shown first with a yellow bar; other cities use blue
+  - When UTC or custom UTC+X is selected, Beijing stays first with a blue bar
+  - The S3R city list is reordered/highlighted, while the UTC clock and six-city data stay unchanged
+- **Scroll speed**
+  - Choose slow / normal / fast in the setup page
+  - Double-click the AtomS3R button to cycle the scroll speed on-device
 - **AtomS3R world clock**
   - Large UTC `HH:MM:SS`
   - UTC date, weekday, and detected Mono count `M3`
@@ -283,7 +317,8 @@ Both the setup page and the AtomS3R screen support **Chinese / English**.
   - NTP synchronization
   - 2.4GHz Wi-Fi only
 - **Controls**
-  - Short press: switch the dot-matrix mode (Beijing clock / custom text)
+  - Short press: switch the dot-matrix mode (clock / custom text)
+  - Double-click: cycle the custom-text scroll speed
   - The world-clock page still rotates automatically every 7 seconds
   - Hold 3 seconds: clear Wi-Fi and re-enter setup
   - Configurable Mono order, Mono brightness, and LCD brightness
@@ -318,7 +353,7 @@ A prebuilt 8MB factory image is included:
 
 ```text
 firmware/M5Clock-AtomS3R-M5Burner.bin
-SHA-256: b9afa56d30066be3b4ff91eddf7bcb73ef6c5043eaef1857e201d969ea7cfae3
+SHA-256: 71a832652ebb7b80c259390f49e80ab89d62c4a22298d73cefc8d3678e07a35a
 ```
 
 1. Open M5Burner → **Custom Firmware**.
@@ -335,8 +370,10 @@ SHA-256: b9afa56d30066be3b4ff91eddf7bcb73ef6c5043eaef1857e201d969ea7cfae3
 3. Choose **中文 / English** at the top.
 4. Select a 2.4GHz Wi-Fi network and enter the password.
 5. Adjust Mono order, Mono brightness, and LCD brightness.
-6. Under “Dot-matrix mode”, choose Beijing clock or custom text (ASCII, up to 32 characters).
-7. Click **Save & Connect**.
+6. Under “Dot-matrix mode”, choose clock or custom text (ASCII, up to 32 characters).
+7. Under “Dot-matrix time zone”, select a fixed city, UTC, or “Custom UTC+X”; for custom, enter an integer from -12 to +14 hours.
+8. Choose the dot-matrix vertical position (top / bottom); for custom text, also choose scroll speed.
+9. Click **Save & Connect**.
 
 After connecting, the AtomS3R shows the world clock and the three Chain Mono modules show Beijing time.
 
@@ -354,7 +391,10 @@ The settings page is also available at `http://m5-clock-xxxx.local/` when mDNS i
 - One blank column between digits.
 - With only one or two Mono modules, the layout falls back to `HH` or `HH:MM`.
 - Custom-text mode uses the same 24×8 area; short text is centered and longer text scrolls.
+- The setup page can select Beijing, London, New York, Los Angeles, Tokyo, Sydney, UTC, or a custom UTC+X offset for the Mono clock.
 - Short-press the AtomS3R button to switch between clock and custom text.
+- Double-click to cycle slow / normal / fast scroll speed.
+- “Dot-matrix vertical position” can keep the clock/text at the top or shift it down one row.
 
 **AtomS3R:**
 
@@ -425,5 +465,11 @@ PlatformIO settings are in `firmware/platformio.ini`. Put M5GFX and M5Chain unde
 ### License
 
 MIT License. M5GFX and M5Chain are copyright M5Stack / lovyan03 and remain under their respective licenses. The Chinese bitmap font is derived from Noto Sans SC Bold under the SIL Open Font License 1.1; see `LICENSES/OFL-1.1.txt`.
+
+
+
+
+
+
 
 
