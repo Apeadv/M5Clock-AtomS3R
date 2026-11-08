@@ -8,6 +8,7 @@ this repository; install them separately when building from source.
 | M5GFX | 0.3.0 | MIT — https://github.com/m5stack/M5GFX |
 | M5Chain | 1.0.11 | MIT — https://github.com/m5stack/M5Chain |
 | Arduino ESP32 core | 3.1.3 | LGPL-2.1 / Apache-2.0 — https://github.com/espressif/arduino-esp32 |
+| Adafruit GFX 5×7 font | — | BSD-3-Clause — [`LICENSES/ADAFRUIT-GFX.txt`](LICENSES/ADAFRUIT-GFX.txt) |
 
 The prebuilt firmware also contains code from the Arduino ESP32 core and the
 libraries above. Their respective licenses continue to apply.

@@ -11,6 +11,11 @@ constexpr int PIN_CHAIN_RX = 6;
 constexpr int PIN_CHAIN_TX = 5;
 constexpr int PIN_BUTTON = 41;
 
+// Grove Port A for an external PDM microphone (M5Stack Unit Mini PDM):
+// Data -> G1, Clock -> G2, 5V/GND from the Grove connector.
+constexpr int PIN_PDM_DATA = 1;
+constexpr int PIN_PDM_CLK = 2;
+
 // Chain Mono supports 0..7 brightness levels. Level 6 is bright but not blinding.
 constexpr uint8_t DEFAULT_CHAIN_BRIGHTNESS = 6;
 constexpr uint8_t DEFAULT_LCD_BRIGHTNESS = 180;
@@ -25,6 +30,7 @@ constexpr uint32_t NTP_RETRY_INTERVAL_MS = 30000;
 
 // Button.
 constexpr uint32_t BUTTON_DEBOUNCE_MS = 25;
+constexpr uint32_t BUTTON_DOUBLE_CLICK_MS = 350;
 constexpr uint32_t BUTTON_LONG_PRESS_MS = 3000;
 
 // A sane lower bound for "the clock has been set" (2023-11-14).

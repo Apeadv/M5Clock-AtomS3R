@@ -3,6 +3,7 @@
 #include <cstring>
 
 #include "config.h"
+#include "text_font.h"
 
 namespace {
 
@@ -35,9 +36,9 @@ void drawDigit(uint8_t frame[8][3], int x, int digit, int y = 0) {
     }
 }
 
-void drawColon(uint8_t frame[8][3], int x) {
-    putPixel(frame, x, 2);
-    putPixel(frame, x, 5);
+void drawColon(uint8_t frame[8][3], int x, int yOffset) {
+    putPixel(frame, x, 2 + yOffset);
+    putPixel(frame, x, 5 + yOffset);
 }
 
 }  // namespace
@@ -138,35 +139,107 @@ void MonoDisplay::setBrightness(uint8_t brightness) {
     }
 }
 
-void MonoDisplay::buildFrame(const struct tm &t, bool colonOn, uint8_t frame[8][3], int modules) const {
+void MonoDisplay::buildFrame(const struct tm &t, bool colonOn, uint8_t yOffset,
+                             uint8_t frame[8][3], int modules) const {
     memset(frame, 0, sizeof(uint8_t) * 8 * 3);
+    const int y = yOffset ? 1 : 0;
 
     if (modules >= 3) {
         // 24x8: each 8px module carries one pair and (except seconds) its colon.
         // One blank column between the two digits makes the pair easier to read.
         // Module 1: "HH:", module 2: "MM:", module 3: "SS ".
-        drawDigit(frame, 0, t.tm_hour / 10);
-        drawDigit(frame, 4, t.tm_hour % 10);
-        if (colonOn) drawColon(frame, 7);
+        drawDigit(frame, 0, t.tm_hour / 10, y);
+        drawDigit(frame, 4, t.tm_hour % 10, y);
+        if (colonOn) drawColon(frame, 7, y);
 
-        drawDigit(frame, 8, t.tm_min / 10);
-        drawDigit(frame, 12, t.tm_min % 10);
-        if (colonOn) drawColon(frame, 15);
+        drawDigit(frame, 8, t.tm_min / 10, y);
+        drawDigit(frame, 12, t.tm_min % 10, y);
+        if (colonOn) drawColon(frame, 15, y);
 
-        drawDigit(frame, 16, t.tm_sec / 10);
-        drawDigit(frame, 20, t.tm_sec % 10);
+        drawDigit(frame, 16, t.tm_sec / 10, y);
+        drawDigit(frame, 20, t.tm_sec % 10, y);
     } else if (modules == 2) {
         // 16x8: "HH:" + "MM " with a one-pixel gap inside each pair.
-        drawDigit(frame, 0, t.tm_hour / 10);
-        drawDigit(frame, 4, t.tm_hour % 10);
-        if (colonOn) drawColon(frame, 7);
-        drawDigit(frame, 8, t.tm_min / 10);
-        drawDigit(frame, 12, t.tm_min % 10);
+        drawDigit(frame, 0, t.tm_hour / 10, y);
+        drawDigit(frame, 4, t.tm_hour % 10, y);
+        if (colonOn) drawColon(frame, 7, y);
+        drawDigit(frame, 8, t.tm_min / 10, y);
+        drawDigit(frame, 12, t.tm_min % 10, y);
     } else {
         // 8x8: "HH" with a one-pixel gap between the digits.
-        drawDigit(frame, 0, t.tm_hour / 10);
-        drawDigit(frame, 4, t.tm_hour % 10);
+        drawDigit(frame, 0, t.tm_hour / 10, y);
+        drawDigit(frame, 4, t.tm_hour % 10, y);
     }
+}
+
+void MonoDisplay::buildTextFrame(const char *text, uint32_t nowMs, uint16_t msPerPixel,
+                                 uint8_t yOffset, uint8_t frame[8][3], int modules) const {
+    memset(frame, 0, sizeof(uint8_t) * 8 * 3);
+    if (text == nullptr || *text == '\0') return;
+
+    const size_t len = strlen(text);
+    const int pitch = 6;  // 5px glyph + 1px gap
+    const int textWidth = static_cast<int>(len) * pitch - 1;
+
+    int startX = 0;
+    if (textWidth <= 24) {
+        startX = (24 - textWidth) / 2;
+    } else {
+        // Scroll left continuously; a little off-screen space on both sides
+        // keeps the loop from looking abrupt.
+        const uint32_t cycle = static_cast<uint32_t>(textWidth + 24);
+        const uint32_t step = msPerPixel > 0 ? msPerPixel : 120U;
+        const uint32_t pos = (nowMs / step) % cycle;
+        startX = 24 - static_cast<int>(pos);
+    }
+
+    int x = startX;
+    for (size_t i = 0; i < len; ++i) {
+        const uint8_t *glyph = glyph5x7(text[i]);
+        for (int col = 0; col < 5; ++col) {
+            uint8_t bits = glyph[col];
+            for (int row = 0; row < 7; ++row) {
+                if (bits & (1U << row)) putPixel(frame, x + col, row + (yOffset ? 1 : 0));
+            }
+        }
+        x += pitch;
+    }
+
+    (void)modules;
+}
+
+void MonoDisplay::showText(const char *text, uint32_t nowMs, uint16_t msPerPixel, uint8_t yOffset) {
+    if (count_ == 0) return;
+    uint8_t frame[8][3];
+    int modules = count_ > 3 ? 3 : count_;
+    buildTextFrame(text, nowMs, msPerPixel, yOffset, frame, modules);
+    pushFrame(frame, modules);
+}
+
+void MonoDisplay::showSpectrum(const uint8_t levels[12]) {
+    if (count_ == 0) return;
+
+    uint8_t frame[8][3] = {};
+    bool any = false;
+    for (int band = 0; band < 12; ++band) {
+        int h = levels[band];
+        if (h > 8) h = 8;
+        if (h > 0) any = true;
+        // Two columns per band, no gaps: all 24 columns packed together.
+        int x = band * 2;
+        for (int row = 8 - h; row < 8; ++row) {
+            putPixel(frame, x, row);
+            putPixel(frame, x + 1, row);
+        }
+    }
+
+    // A full baseline makes the spectrum mode obvious even before audio.
+    if (!any) {
+        for (int x = 0; x < 24; ++x) putPixel(frame, x, 7);
+    }
+
+    int modules = count_ > 3 ? 3 : count_;
+    pushFrame(frame, modules);
 }
 
 void MonoDisplay::pushFrame(uint8_t frame[8][3], int modules) {
@@ -184,11 +257,11 @@ void MonoDisplay::pushFrame(uint8_t frame[8][3], int modules) {
     }
 }
 
-void MonoDisplay::showTime(const struct tm &beijing, bool colonOn) {
+void MonoDisplay::showTime(const struct tm &region, bool colonOn, uint8_t yOffset) {
     if (count_ == 0) return;
     uint8_t frame[8][3];
     int modules = count_ > 3 ? 3 : count_;
-    buildFrame(beijing, colonOn, frame, modules);
+    buildFrame(region, colonOn, yOffset, frame, modules);
     pushFrame(frame, modules);
 }
 

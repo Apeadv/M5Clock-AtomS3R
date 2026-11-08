@@ -1,4 +1,4 @@
-# M5Clock — AtomS3R × 3 Chain Mono World Clock
+﻿# M5Clock — AtomS3R × 3 Chain Mono World Clock
 
 [中文](#中文) · [English](#english)
 
@@ -50,14 +50,27 @@ M5Clock 是一个为 **M5Stack AtomS3R + Atomic toChain Base + 3× Chain Mono** 
   - 不写死 Wi-Fi 密码
   - NTP 自动对时
   - 支持 2.4GHz Wi-Fi
-- **自定义点阵字符**
-  - 配网页新增“点阵屏模式”分支
-  - 可选择时钟模式，或输入最多 32 个 ASCII 字符
-  - 4 个字符以内居中显示，更长自动横向滚动
-  - 点阵屏仍在 24×8 的三个 Chain Mono 上显示
+- **频谱字幕**
+  - 最多 32 个 ASCII 字符
+  - 直接显示在音乐频谱底部
+  - 21 个字符以内居中，更长自动横向滚动
+  - 三个 Chain Mono 不再显示字幕，始终显示时钟
 - **点阵屏垂直位置**
   - 上方 / 下方（整体下移 1 行）
-  - 时钟和自定义字符都生效
+  - 只作用于 Chain Mono 时钟
+- **音乐频谱**
+  - AtomS3R 屏幕单独选择“世界时间 / 音乐频谱”
+  - “S3R 同步切换”默认开启：Chain Mono 短按切到频谱时，S3R 自动切到频谱
+  - 关闭后 S3R 保持当前界面，不跟随 Chain Mono
+  - 三个 Chain Mono 可短按切换时钟 / 字幕 / 频谱
+  - AtomS3R 显示 12 段彩色频谱：渐变柱、落峰、倒影、低频边框脉冲和 LIVE 指示
+  - 没有电脑数据时显示待机起伏波形和 `NO PC`
+  - 字幕整合在频谱底部，不再单独占一个界面
+  - 默认使用 USB 电脑连接，不需要额外麦克风
+  - 电脑端运行 `pc/m5clock_spectrum.py`，通过 USB 串口发送频谱
+  - 也可以选 PDM 麦克风（M5Stack Unit Mini PDM），接 Grove Port A
+  - ESP32-S3 只有 BLE，不支持 Classic Bluetooth / A2DP，所以不能直接接蓝牙音频
+  - 没有电脑数据或麦克风时 S3R 显示 `NO PC` / `NO MIC`
 - **点阵屏时区**
   - 配网页可选择点阵屏显示的地区时间：
     - 北京、伦敦、纽约、洛杉矶、东京、悉尼、UTC
@@ -70,8 +83,8 @@ M5Clock 是一个为 **M5Stack AtomS3R + Atomic toChain Base + 3× Chain Mono** 
   - 配网页可选择 慢 / 正常 / 快
   - 在 AtomS3R 上双击按键也可循环切换滚屏速度
 - **交互**
-  - 短按 AtomS3R 按键：切换点阵屏模式（时钟 / 自定义字符）
-  - 双击 AtomS3R 按键：切换自定义字符滚屏速度
+  - 短按 AtomS3R 按键：切换 Chain Mono 的“时钟 / 字幕 / 频谱”
+  - 双击 AtomS3R 按键：切换频谱字幕滚动速度
   - 世界时间页仍每 7 秒自动轮播
   - 长按 3 秒：清除 Wi-Fi 并重新进入配网模式
   - 配网页可设置 Mono 顺序、Mono 亮度、屏幕亮度
@@ -83,6 +96,7 @@ M5Clock 是一个为 **M5Stack AtomS3R + Atomic toChain Base + 3× Chain Mono** 
 | AtomS3R | C126，ESP32-S3，8MB Flash + 8MB PSRAM |
 | Atomic toChain Base | A163，Atom 转 Chain 总线底座 |
 | Chain Mono ×3 | U217，8×8 单色点阵 |
+| PDM 麦克风（可选） | M5Stack Unit Mini PDM，音乐频谱用 |
 
 Chain 总线：
 
@@ -100,13 +114,31 @@ Chain 总线：
 3. 默认 Chain ID1 → 左，ID2 → 中，ID3 → 右。
 4. 如果顺序相反，在配网页把 **Mono order / Mono 顺序** 改成 **Right → Left / 右 → 左**。
 
+音乐频谱有两种输入方式：
+
+1. **USB 电脑（默认，推荐）**
+   - AtomS3R 用 USB-C 连电脑
+   - 电脑运行 `pc/m5clock_spectrum.py --port COMx`
+   - 脚本抓取电脑正在播放的声音，通过 USB 串口发送 12 段频谱
+   - 不需要额外硬件
+
+2. **PDM 麦克风（可选）**
+   - M5Stack Unit Mini PDM（SPM1423）或兼容 PDM 麦克风
+   - 接到 Grove Port A
+   - Data → G1（GPIO1）
+   - Clock → G2（GPIO2）
+   - 5V / GND 由 Grove 提供
+   - 如果 Data/Clock 接反，频谱会没有反应，交换 G1/G2 即可
+
+> 蓝牙音频不支持：ESP32-S3 只有 BLE，没有 Classic Bluetooth / A2DP。
+
 ### 烧录（M5Burner）
 
 仓库内已经包含编译好的 8MB 整片镜像：
 
 ```text
 firmware/M5Clock-AtomS3R-M5Burner.bin
-SHA-256: 71a832652ebb7b80c259390f49e80ab89d62c4a22298d73cefc8d3678e07a35a
+SHA-256: 1c96cd076d992ba10919d1a7f211417a7a837dd8935fc85fc39d931b764f94ba
 ```
 
 步骤：
@@ -127,10 +159,11 @@ SHA-256: 71a832652ebb7b80c259390f49e80ab89d62c4a22298d73cefc8d3678e07a35a
 3. 页面顶部选择 **中文 / English**。
 4. 选择 2.4GHz Wi-Fi，输入密码。
 5. 按需调整 Mono 顺序、Mono 亮度、屏幕亮度。
-6. 在“点阵屏模式”选择“时钟”或“自定义字符”；自定义字符最多 32 个 ASCII 字符。
-7. 在“点阵屏时区”选择固定城市、UTC，或“自定义 UTC+X”；选择自定义时输入 -12 到 +14 的整数小时。
-8. 选择点阵屏垂直位置（上方 / 下方）；如使用自定义字符，再选择滚屏速度。
-9. 点击 **保存并连接 / Save & Connect**。
+6. **AtomS3R 屏幕**选择“世界时间”或“音乐频谱”；再选择 **S3R 同步切换** 开 / 关。开启后 Chain Mono 切到频谱，S3R 也切到频谱。
+7. 频谱字幕最多 32 个 ASCII 字符，显示在音乐频谱底部；音频来源选“USB 电脑”或“PDM 麦克风”。
+8. 在“点阵屏时区”选择固定城市、UTC，或“自定义 UTC+X”；选择自定义时输入 -12 到 +14 的整数小时。
+9. 选择点阵屏垂直位置（上方 / 下方）和字幕滚动速度。
+10. 点击 **保存并连接 / Save & Connect**。
 
 连接成功后，AtomS3R 屏幕会显示世界时间；三个 Chain Mono 显示北京时间。
 
@@ -144,14 +177,37 @@ SHA-256: 71a832652ebb7b80c259390f49e80ab89d62c4a22298d73cefc8d3678e07a35a
 [ H H : ] [ M M : ] [ S S  ]
 ```
 
-- 北京时间固定 UTC+8，不跟随设备时区。
+- 默认北京时间 UTC+8，可在配网页切换时区或自定义 UTC+X。
 - 数字之间空 1 列；冒号在对应模组最右侧。
 - 只接 1 或 2 个 Mono 时，自动降级显示 `HH` 或 `HH:MM`。
-- 配网页“点阵屏模式”可切换为自定义字符；4 个字符以内居中，更长自动横向滚动。
+- 自定义字幕显示在音乐频谱底部；21 个字符以内居中，更长自动横向滚动。
 - 配网页“点阵屏时区”可选择北京、伦敦、纽约、洛杉矶、东京、悉尼、UTC，或自定义 UTC+X。
-- 短按 AtomS3R 按键可在“时钟”和“自定义字符”之间切换。
+- 短按 AtomS3R 按键可切换 Chain Mono 的“时钟 / 字幕 / 频谱”；S3R 的世界时间 / 频谱在配网页选择。
 - 双击 AtomS3R 按键可循环切换滚屏速度（慢 / 正常 / 快）。
-- 配网页“点阵屏垂直位置”可让时钟和自定义字符整体下移一行，或保持在上方。
+- 配网页“点阵屏垂直位置”可让 Chain Mono 时钟整体下移一行，或保持在上方。
+- 音乐频谱默认用 USB 电脑连接；也可以选 PDM 麦克风。没有数据时 S3R 显示 `NO PC` / `NO MIC`。
+- 蓝牙音频不支持：ESP32-S3 只有 BLE，没有 Classic Bluetooth / A2DP。
+
+**电脑端：**
+
+Windows 直接双击：
+
+```text
+pc/M5Clock-Spectrum.vbs
+```
+
+它在后台静默运行，不出现黑框，也不占任务栏。第一次运行会问一次是否设置开机自启，选“否”不会添加任何启动项。之后会自动安装依赖并检测串口。需要看日志时才用 `pc/M5Clock-Spectrum.bat`。
+
+也可以手动运行 `pc/Install-Autostart.bat` 添加；取消用 `pc/Remove-Autostart.bat`。自启也是静默的。
+
+也可以手动运行：
+
+```bash
+py -m pip install -r pc/requirements.txt
+py pc/m5clock_spectrum.py
+```
+
+先关闭 Arduino 串口监视器和 M5Burner 的串口窗口。详细说明见 [`pc/README.md`](pc/README.md)。
 
 **AtomS3R：**
 
@@ -253,7 +309,7 @@ PlatformIO 配置见 `firmware/platformio.ini`。把 M5GFX / M5Chain 放到 `fir
 
 ### 版本
 
-- 固件版本：**1.3.2**
+- 固件版本：**1.4.0**
 - 目标芯片：ESP32-S3（AtomS3R，8MB Flash + 8MB PSRAM）
 - Arduino ESP32 Core：3.1.3
 - M5GFX：0.3.0
@@ -283,13 +339,28 @@ Both the setup page and the AtomS3R screen support **Chinese / English**.
   - One-pixel gap between digits
   - Blinking colons on the first two modules
   - No moving seconds dot at the bottom
-- **Custom dot-matrix text**
-  - New “Dot-matrix mode” section in the setup page
-  - Choose clock mode or enter up to 32 ASCII characters
-  - Up to 4 characters are centered; longer text scrolls horizontally
+- **Spectrum subtitle**
+  - Up to 32 ASCII characters
+  - Displayed at the bottom of the music spectrum
+  - Up to 21 characters are centered; longer text scrolls
+  - The three Chain Mono modules always show the clock
 - **Dot-matrix vertical position**
   - Top, or bottom (shifted down one row)
-  - Applies to both the clock and custom text
+  - Applies to the Chain Mono clock
+- **Music spectrum**
+  - The AtomS3R screen switches between world clock and music spectrum
+  - “Sync S3R screen” is on by default: switching Chain Mono to spectrum also switches the S3R
+  - Turn it off to keep the S3R screen unchanged
+  - The three Chain Mono modules switch clock / subtitle / spectrum with a short press
+  - 12-band color spectrum on the AtomS3R 128×128 LCD
+  - Gradient bars, falling peaks, reflection, bass pulse, and LIVE indicator
+  - The subtitle is integrated into the bottom of the spectrum screen
+  - Idle animation with `NO PC` when no data is available
+  - USB PC mode by default; no extra microphone needed
+  - Run `pc/m5clock_spectrum.py` on the PC; it sends spectrum data over USB serial
+  - Optional PDM microphone (M5Stack Unit Mini PDM) on Grove Port A
+  - ESP32-S3 is BLE-only, so Classic Bluetooth / A2DP audio is not supported
+  - Shows `NO PC` / `NO MIC` when no data is available
 - **Dot-matrix time zone**
   - Select the region shown on the three Chain Mono modules:
     - Beijing, London, New York, Los Angeles, Tokyo, Sydney, UTC
@@ -317,7 +388,7 @@ Both the setup page and the AtomS3R screen support **Chinese / English**.
   - NTP synchronization
   - 2.4GHz Wi-Fi only
 - **Controls**
-  - Short press: switch the dot-matrix mode (clock / custom text)
+  - Short press: switch the Chain Mono display between clock / subtitle / spectrum
   - Double-click: cycle the custom-text scroll speed
   - The world-clock page still rotates automatically every 7 seconds
   - Hold 3 seconds: clear Wi-Fi and re-enter setup
@@ -330,6 +401,7 @@ Both the setup page and the AtomS3R screen support **Chinese / English**.
 | AtomS3R | C126, ESP32-S3, 8MB Flash + 8MB PSRAM |
 | Atomic toChain Base | A163 |
 | Chain Mono ×3 | U217, 8×8 monochrome |
+| PDM microphone (optional) | M5Stack Unit Mini PDM, for music spectrum |
 
 Chain bus:
 
@@ -347,13 +419,31 @@ Wiring:
 3. Default: Chain ID1 → left, ID2 → middle, ID3 → right.
 4. If reversed, set **Mono order → Right → Left** in the setup page.
 
+Music spectrum has two input options:
+
+1. **USB PC (default, recommended)**
+   - Connect the AtomS3R to the PC with USB-C
+   - Run `pc/m5clock_spectrum.py --port COMx`
+   - The script captures the PC's playback audio and sends 12 band levels over USB serial
+   - No extra hardware
+
+2. **PDM microphone (optional)**
+   - M5Stack Unit Mini PDM (SPM1423) or compatible PDM microphone
+   - Connect to Grove Port A
+   - Data → G1 (GPIO1)
+   - Clock → G2 (GPIO2)
+   - 5V / GND from Grove
+   - If Data/Clock are swapped, the spectrum stays flat; swap G1/G2
+
+> Bluetooth audio is not supported: ESP32-S3 is BLE-only, with no Classic Bluetooth / A2DP.
+
 ### Flash with M5Burner
 
 A prebuilt 8MB factory image is included:
 
 ```text
 firmware/M5Clock-AtomS3R-M5Burner.bin
-SHA-256: 71a832652ebb7b80c259390f49e80ab89d62c4a22298d73cefc8d3678e07a35a
+SHA-256: 1c96cd076d992ba10919d1a7f211417a7a837dd8935fc85fc39d931b764f94ba
 ```
 
 1. Open M5Burner → **Custom Firmware**.
@@ -370,10 +460,11 @@ SHA-256: 71a832652ebb7b80c259390f49e80ab89d62c4a22298d73cefc8d3678e07a35a
 3. Choose **中文 / English** at the top.
 4. Select a 2.4GHz Wi-Fi network and enter the password.
 5. Adjust Mono order, Mono brightness, and LCD brightness.
-6. Under “Dot-matrix mode”, choose clock or custom text (ASCII, up to 32 characters).
-7. Under “Dot-matrix time zone”, select a fixed city, UTC, or “Custom UTC+X”; for custom, enter an integer from -12 to +14 hours.
-8. Choose the dot-matrix vertical position (top / bottom); for custom text, also choose scroll speed.
-9. Click **Save & Connect**.
+6. **AtomS3R screen**: world clock or music spectrum. Set **Sync S3R screen** on/off. When on, switching Chain Mono to spectrum also switches the S3R.
+7. The spectrum subtitle supports up to 32 ASCII characters and appears at the bottom of the spectrum. Choose USB PC or PDM microphone.
+8. Under “Dot-matrix time zone”, select a fixed city, UTC, or “Custom UTC+X”; for custom, enter an integer from -12 to +14 hours.
+9. Choose the dot-matrix vertical position (top / bottom) and subtitle scroll speed.
+10. Click **Save & Connect**.
 
 After connecting, the AtomS3R shows the world clock and the three Chain Mono modules show Beijing time.
 
@@ -387,14 +478,35 @@ The settings page is also available at `http://m5-clock-xxxx.local/` when mDNS i
 [ H H : ] [ M M : ] [ S S  ]
 ```
 
-- Beijing time is fixed at UTC+8.
+- Defaults to Beijing time (UTC+8); the setup page can change the zone or use a custom UTC+X offset.
 - One blank column between digits.
 - With only one or two Mono modules, the layout falls back to `HH` or `HH:MM`.
 - Custom-text mode uses the same 24×8 area; short text is centered and longer text scrolls.
 - The setup page can select Beijing, London, New York, Los Angeles, Tokyo, Sydney, UTC, or a custom UTC+X offset for the Mono clock.
-- Short-press the AtomS3R button to switch between clock and custom text.
+- Short-press the AtomS3R button to switch the Chain Mono display between clock / subtitle / spectrum. Choose the S3R screen in the setup page.
 - Double-click to cycle slow / normal / fast scroll speed.
 - “Dot-matrix vertical position” can keep the clock/text at the top or shift it down one row.
+- Music spectrum uses USB PC by default; PDM microphone is optional. Without data the S3R shows `NO PC` / `NO MIC`.
+- Bluetooth audio is not supported: ESP32-S3 is BLE-only, without Classic Bluetooth / A2DP.
+
+**PC:**
+
+On Windows, double-click:
+
+```text
+pc/M5Clock-Spectrum.vbs
+```
+
+It runs hidden in the background, with no console window or taskbar button. On first run it asks whether to enable startup; choosing No adds nothing. Use `pc/M5Clock-Spectrum.bat` only when you need logs.
+
+You can also run `pc/Install-Autostart.bat` manually; remove with `pc/Remove-Autostart.bat`. Autostart is silent too. Manual:
+
+```bash
+py -m pip install -r pc/requirements.txt
+py pc/m5clock_spectrum.py
+```
+
+Close Arduino Serial Monitor and M5Burner serial windows first. See [`pc/README.md`](pc/README.md).
 
 **AtomS3R:**
 
@@ -465,6 +577,18 @@ PlatformIO settings are in `firmware/platformio.ini`. Put M5GFX and M5Chain unde
 ### License
 
 MIT License. M5GFX and M5Chain are copyright M5Stack / lovyan03 and remain under their respective licenses. The Chinese bitmap font is derived from Noto Sans SC Bold under the SIL Open Font License 1.1; see `LICENSES/OFL-1.1.txt`.
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

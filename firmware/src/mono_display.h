@@ -15,13 +15,18 @@ public:
     int count() const { return count_; }
     bool ready() const { return count_ > 0; }
 
-    void showTime(const struct tm &beijing, bool colonOn);
+    void showTime(const struct tm &region, bool colonOn, uint8_t yOffset);
+    void showText(const char *text, uint32_t nowMs, uint16_t msPerPixel, uint8_t yOffset);
+    void showSpectrum(const uint8_t levels[12]);
     void clear();
 
 private:
     bool discover(uint8_t brightness);
     bool configure(uint8_t id, uint8_t brightness);
-    void buildFrame(const struct tm &t, bool colonOn, uint8_t frame[8][3], int modules) const;
+    void buildFrame(const struct tm &t, bool colonOn, uint8_t yOffset, uint8_t frame[8][3],
+                    int modules) const;
+    void buildTextFrame(const char *text, uint32_t nowMs, uint16_t msPerPixel,
+                        uint8_t yOffset, uint8_t frame[8][3], int modules) const;
     void pushFrame(uint8_t frame[8][3], int modules);
 
     Chain chain_;

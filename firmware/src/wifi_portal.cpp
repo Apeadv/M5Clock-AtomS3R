@@ -24,6 +24,17 @@ String htmlEscape(const String &in) {
     return out;
 }
 
+String sanitizeMonoText(const String &in) {
+    String out;
+    out.reserve(32);
+    for (size_t i = 0; i < in.length() && out.length() < 32; ++i) {
+        char c = in[i];
+        if (c >= 32 && c <= 126) out += c;
+    }
+    out.trim();
+    return out;
+}
+
 String stateName(NetState state) {
     switch (state) {
         case NetState::Connected: return "connected";
@@ -189,6 +200,8 @@ void WifiPortal::redirectPortal() {
 }
 
 void WifiPortal::handleRoot() {
+    server_.sendHeader("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0");
+    server_.sendHeader("Pragma", "no-cache");
     server_.send(200, "text/html; charset=utf-8", buildPage());
 }
 
@@ -215,10 +228,22 @@ void WifiPortal::handleSave() {
     settings_->monoOrder = server_.arg("order").toInt() ? 1 : 0;
     settings_->chainBrightness = constrain(server_.arg("chain").toInt(), 0, 7);
     settings_->lcdBrightness = constrain(server_.arg("lcd").toInt(), 30, 255);
+    settings_->region = constrain(server_.arg("region").toInt(), 0, REGION_MAX);
+    settings_->customUtcOffset = constrain(server_.arg("utcOffset").toInt(), -12, 14);
+    settings_->audioSource = constrain(server_.arg("audioSource").toInt(), 0, 1);
+    settings_->screenMode = constrain(server_.arg("screenMode").toInt(), 0, 1);
+    settings_->syncScreen = constrain(server_.arg("syncScreen").toInt(), 0, 1);
+    settings_->scrollSpeed = constrain(server_.arg("speed").toInt(), 0, 2);
+    settings_->textPosition = constrain(server_.arg("textPosition").toInt(), 0, 1);
+    String monoText = sanitizeMonoText(server_.arg("monoText"));
+    if (monoText.length() > 0) settings_->monoText = monoText;
     settings_->save();
 
-    Serial.printf("[CFG] saved ssid=%s order=%u chain=%u lcd=%u\n", settings_->ssid.c_str(),
-                  settings_->monoOrder, settings_->chainBrightness, settings_->lcdBrightness);
+    Serial.printf("[CFG] saved ssid=%s order=%u chain=%u lcd=%u screen=%u region=%u utc=%d audio=%u speed=%u pos=%u text='%s'\n",
+                  settings_->ssid.c_str(), settings_->monoOrder, settings_->chainBrightness,
+                  settings_->lcdBrightness, settings_->screenMode, settings_->region,
+                  settings_->customUtcOffset, settings_->audioSource, settings_->scrollSpeed,
+                  settings_->textPosition, settings_->monoText.c_str());
 
     server_.send(200, "text/html; charset=utf-8",
                  successPage(en ? "Saved" : "保存成功",
@@ -247,8 +272,14 @@ void WifiPortal::handleLang() {
     if (settings_ == nullptr) return;
     settings_->lang = server_.arg("to") == "en" ? 1 : 0;
     settings_->save();
-    server_.sendHeader("Location", "/", true);
-    server_.send(303, "text/plain", "");
+    Serial.printf("[HTTP] language -> %s\n", settings_->lang ? "English" : "中文");
+
+    // Render the page directly instead of redirecting. Some captive-portal
+    // browsers cache the redirect target, which made the switch appear to do
+    // nothing. No-store headers plus a direct 200 response make it reliable.
+    server_.sendHeader("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0");
+    server_.sendHeader("Pragma", "no-cache");
+    server_.send(200, "text/html; charset=utf-8", buildPage());
 }
 
 void WifiPortal::handleStatus() {
@@ -300,6 +331,7 @@ String WifiPortal::buildPage() {
     const bool en = english();
     const bool portal = state_ == NetState::Portal;
     const String ssid = htmlEscape(settings_->ssid);
+    const String monoTextValue = htmlEscape(settings_->monoText);
     const String ap = htmlEscape(apSsid_);
     const String deviceIp = htmlEscape(ip());
 
@@ -358,6 +390,20 @@ String WifiPortal::buildPage() {
                                        : (en ? "Leave blank for an open network"
                                              : "开放网络可留空");
 
+    String regionOptions;
+    for (int i = 0; i < REGION_FIXED_COUNT; ++i) {
+        regionOptions += "<option value=\"" + String(i) + "\"";
+        if (settings_->region == i) regionOptions += " selected";
+        regionOptions += ">";
+        regionOptions += en ? REGIONS[i].en : REGIONS[i].cn;
+        regionOptions += "</option>";
+    }
+    regionOptions += "<option value=\"" + String(REGION_CUSTOM) + "\"";
+    if (settings_->region == REGION_CUSTOM) regionOptions += " selected";
+    regionOptions += ">";
+    regionOptions += en ? "Custom UTC+X" : "自定义 UTC+X";
+    regionOptions += "</option>";
+
     String p;
     p.reserve(11000);
     p += "<!DOCTYPE html><html lang=\"";
@@ -412,6 +458,8 @@ String WifiPortal::buildPage() {
     p += "button:active{transform:translateY(1px)}button.ghost{margin-top:10px;background:transparent;"
          "border:1px solid #243d50;color:#9fb6c8;box-shadow:none;font-weight:600}";
     p += ".foot{font-size:11px;color:#637b8d;line-height:1.7;margin:18px 0 0;text-align:center}";
+    p += ".modebox{margin-top:18px;padding-top:14px;border-top:1px dashed #1d3546}";
+    p += ".help{font-size:11px;color:#637b8d;line-height:1.5;margin:6px 2px 0}";
     p += "@media(max-width:380px){.row{grid-template-columns:1fr}h1{font-size:24px}.card{padding:20px}}";
     p += "</style></head><body><main class=\"card\">";
     p += "<div class=\"top\"><div class=\"brand\"><span class=\"logo\">M5</span><span>WORLD CLOCK</span></div>";
@@ -432,6 +480,31 @@ String WifiPortal::buildPage() {
     const char *lblOrder = en ? "Mono order" : "Mono 顺序";
     const char *lblChain = en ? "Mono brightness" : "Mono 亮度";
     const char *lblLcd = en ? "Screen brightness" : "屏幕亮度";
+    const char *lblScreen = en ? "AtomS3R screen" : "AtomS3R 屏幕";
+    const char *optSpectrum = en ? "Music spectrum" : "音乐频谱";
+    const char *optWorld = en ? "World clock" : "世界时间";
+    const char *lblSync = en ? "Sync S3R screen" : "S3R 同步切换";
+    const char *syncOn = en ? "Follow Chain spectrum" : "切到频谱时同步显示";
+    const char *syncOff = en ? "Keep S3R screen" : "保持 S3R 当前界面";
+    const char *lblAudio = en ? "Spectrum audio source" : "频谱音频来源";
+    const char *audioUsb = en ? "USB PC" : "USB 电脑";
+    const char *audioPdm = en ? "PDM microphone" : "PDM 麦克风";
+    const char *lblRegion = en ? "Dot-matrix time zone" : "点阵屏时区";
+    const char *lblCustomUtc = en ? "Custom UTC offset (hours)" : "自定义 UTC 偏移（小时）";
+    const char *hintCustomUtc = en ? "Integer hours, -12 to +14. For example, 3 means UTC+3."
+                                  : "整数小时，-12 到 +14。例如 3 表示 UTC+3。";
+    const char *lblSpeed = en ? "Subtitle scroll speed" : "字幕滚动速度";
+    const char *speedSlow = en ? "Slow" : "慢";
+    const char *speedNormal = en ? "Normal" : "正常";
+    const char *speedFast = en ? "Fast" : "快";
+    const char *lblPos = en ? "Dot-matrix vertical position" : "点阵屏垂直位置";
+    const char *posTop = en ? "Top" : "上方";
+    const char *posBottom = en ? "Bottom (shift down 1 row)" : "下方（整体下移 1 行）";
+    const char *lblCustom = en ? "Spectrum subtitle (ASCII)" : "频谱字幕（ASCII）";
+    const char *customHelp = en
+                                 ? "Shown at the bottom of the music spectrum. Up to 21 characters are centered; longer text scrolls."
+                                 : "显示在音乐频谱底部。21 个字符以内居中，更长自动滚动。";
+    const char *customPlaceholder = en ? "M5STACK" : "例如：M5STACK";
     const char *optLeft = en ? "Left → Right" : "左 → 右";
     const char *optRight = en ? "Right → Left" : "右 → 左";
     const char *btnSave = en ? "Save & Connect" : "保存并连接";
@@ -476,6 +549,87 @@ String WifiPortal::buildPage() {
     p += "<input type=\"range\" name=\"lcd\" min=\"30\" max=\"255\" value=\"" +
          String(settings_->lcdBrightness) +
          "\" oninput=\"document.getElementById('lv').textContent=this.value\">";
+
+    p += "<div class=\"modebox\">";
+    p += "<label>";
+    p += lblScreen;
+    p += "</label><select name=\"screenMode\">";
+    p += "<option value=\"0\"" + String(settings_->screenMode == 0 ? " selected" : "") + ">";
+    p += optWorld;
+    p += "</option><option value=\"1\"" + String(settings_->screenMode == 1 ? " selected" : "") + ">";
+    p += optSpectrum;
+    p += "</option></select>";
+    p += "<label>";
+    p += lblSync;
+    p += "</label><select name=\"syncScreen\">";
+    p += "<option value=\"1\"" + String(settings_->syncScreen == 1 ? " selected" : "") + ">";
+    p += syncOn;
+    p += "</option><option value=\"0\"" + String(settings_->syncScreen == 0 ? " selected" : "") + ">";
+    p += syncOff;
+    p += "</option></select>";
+    p += "<p class=\"help\">";
+    p += en ? "When Chain Mono switches to spectrum, the S3R screen follows automatically."
+            : "Chain Mono 短按切到频谱时，S3R 屏幕自动切到频谱。";
+    p += "</p>";
+
+    p += "<label>";
+    p += lblAudio;
+    p += "</label><select name=\"audioSource\">";
+    p += "<option value=\"0\"" + String(settings_->audioSource == 0 ? " selected" : "") + ">";
+    p += audioUsb;
+    p += "</option><option value=\"1\"" + String(settings_->audioSource == 1 ? " selected" : "") + ">";
+    p += audioPdm;
+    p += "</option></select>";
+    p += "<p class=\"help\">";
+    p += en ? "USB PC uses the companion script over USB serial. PDM uses Unit Mini PDM on Grove Port A (Data G1 / Clock G2)."
+            : "USB 电脑通过 USB 串口连接电脑端脚本；PDM 使用 Unit Mini PDM，接 Grove Port A（Data G1 / Clock G2）。";
+    p += "</p>";
+    p += "<p class=\"help\">";
+    p += en ? "Short-press the AtomS3R button to switch Chain Mono: clock / subtitle / spectrum."
+            : "短按 AtomS3R 按键切换 Chain Mono 显示：时钟 / 字幕 / 频谱。";
+    p += "</p>";
+
+    p += "<label>";
+    p += lblRegion;
+    p += "</label><select id=\"region\" name=\"region\" onchange=\"document.getElementById('customUtcWrap').style.display=this.value==='7'?'block':'none'\">" +
+         regionOptions + "</select>";
+    p += "<div id=\"customUtcWrap\" style=\"display:";
+    p += settings_->region == REGION_CUSTOM ? "block" : "none";
+    p += "\"><label>";
+    p += lblCustomUtc;
+    p += "</label><input type=\"number\" name=\"utcOffset\" min=\"-12\" max=\"14\" step=\"1\" value=\"" +
+         String(settings_->customUtcOffset) + "\">";
+    p += "<p class=\"help\">";
+    p += hintCustomUtc;
+    p += "</p></div>";
+
+    p += "<label>";
+    p += lblPos;
+    p += "</label><select name=\"textPosition\">";
+    p += "<option value=\"0\"" + String(settings_->textPosition == 0 ? " selected" : "") + ">";
+    p += posTop;
+    p += "</option><option value=\"1\"" + String(settings_->textPosition == 1 ? " selected" : "") + ">";
+    p += posBottom;
+    p += "</option></select>";
+
+    p += "<div id=\"customTextWrap\" style=\"display:block\"><label>";
+    p += lblCustom;
+    p += "</label><input name=\"monoText\" maxlength=\"32\" value=\"" + monoTextValue +
+         "\" placeholder=\"" + customPlaceholder + "\" autocapitalize=\"none\" spellcheck=\"false\">";
+    p += "<p class=\"help\">";
+    p += customHelp;
+    p += "</p>";
+    p += "<label>";
+    p += lblSpeed;
+    p += "</label><select name=\"speed\">";
+    p += "<option value=\"0\"" + String(settings_->scrollSpeed == 0 ? " selected" : "") + ">";
+    p += speedSlow;
+    p += "</option><option value=\"1\"" + String(settings_->scrollSpeed == 1 ? " selected" : "") + ">";
+    p += speedNormal;
+    p += "</option><option value=\"2\"" + String(settings_->scrollSpeed == 2 ? " selected" : "") + ">";
+    p += speedFast;
+    p += "</option></select></div></div>";
+
     p += "<button type=\"submit\">";
     p += btnSave;
     p += "</button></form>";
